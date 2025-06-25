@@ -36,7 +36,7 @@ func (api *API) GetUpdates(ctx context.Context, token string, req *dto.GetUpdate
 func (api *API) GetUpdatesRaw(ctx context.Context, token string, req *dto.GetUpdatesRequest) ([]byte, error) {
 	const src = "API.GetUpdatesRaw"
 
-	resp, err := requestRaw[dto.GetUpdatesRequest](ctx, token, dto.GetUpdatesMethod, req)
+	resp, err := requestRaw(ctx, token, dto.GetUpdatesMethod, req)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", src, err)
 	}
@@ -45,7 +45,7 @@ func (api *API) GetUpdatesRaw(ctx context.Context, token string, req *dto.GetUpd
 }
 
 func request [T, E any] (ctx context.Context, token string, method string, data *T) (*E, error) {
-	body, err := requestRaw[T](ctx, token, method, data)
+	body, err := requestRaw(ctx, token, method, data)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,8 @@ func requestRaw [T any] (ctx context.Context, token string, method string, data 
 		return nil, fmt.Errorf("marshal body: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url(token, method), bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url(token, method), bytes.NewReader(body))
+	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
