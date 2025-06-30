@@ -102,8 +102,6 @@ func requestRaw [T any] (ctx context.Context, cl *http.Client, token string, met
 	}
 	defer resp.Body.Close()
 
-	log.Println(string(respBody))
-
 	return respBody, nil
 }
 
