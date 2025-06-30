@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/AleksandrVishniakov/tgbots-tgapi/dto"
@@ -16,16 +17,31 @@ var (
 	ErrAPIError = errors.New("api error")
 )
 
-type API struct {}
+type API struct {
+	httpClient *http.Client
+}
 
 func New() *API {
-	return &API{}
+	return &API{
+		httpClient: &http.Client{},
+	}
+}
+
+func (api *API) GetMe(ctx context.Context, token string) (*dto.GetMeResponse, error) {
+	const src = "API.GetMe"
+
+	resp, err := request[any, dto.GetMeResponse](ctx, api.httpClient, token, dto.GetMeMethod, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", src, err)
+	}
+
+	return resp, nil
 }
 
 func (api *API) GetUpdates(ctx context.Context, token string, req *dto.GetUpdatesRequest) (*dto.GetUpdatesResponse, error) {
 	const src = "API.GetUpdates"
 
-	resp, err := request[dto.GetUpdatesRequest, dto.GetUpdatesResponse](ctx, token, dto.GetUpdatesMethod, req)
+	resp, err := request[dto.GetUpdatesRequest, dto.GetUpdatesResponse](ctx, api.httpClient, token, dto.GetUpdatesMethod, req)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", src, err)
 	}
@@ -36,7 +52,7 @@ func (api *API) GetUpdates(ctx context.Context, token string, req *dto.GetUpdate
 func (api *API) GetUpdatesRaw(ctx context.Context, token string, req *dto.GetUpdatesRequest) ([]byte, error) {
 	const src = "API.GetUpdatesRaw"
 
-	resp, err := requestRaw(ctx, token, dto.GetUpdatesMethod, req)
+	resp, err := requestRaw(ctx, api.httpClient, token, dto.GetUpdatesMethod, req)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", src, err)
 	}
@@ -44,8 +60,8 @@ func (api *API) GetUpdatesRaw(ctx context.Context, token string, req *dto.GetUpd
 	return resp, nil
 }
 
-func request [T, E any] (ctx context.Context, token string, method string, data *T) (*E, error) {
-	body, err := requestRaw(ctx, token, method, data)
+func request [T, E any] (ctx context.Context, cl *http.Client, token string, method string, data *T) (*E, error) {
+	body, err := requestRaw(ctx, cl, token, method, data)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +75,7 @@ func request [T, E any] (ctx context.Context, token string, method string, data 
 	return &res, nil
 }
 
-func requestRaw [T any] (ctx context.Context, token string, method string, data *T) ([]byte, error) {
-	cl := &http.Client{}
+func requestRaw [T any] (ctx context.Context, cl *http.Client, token string, method string, data *T) ([]byte, error) {
 	body, err := json.Marshal(data)
 	if err != nil {
 		return nil, fmt.Errorf("marshal body: %w", err)
@@ -86,6 +101,8 @@ func requestRaw [T any] (ctx context.Context, token string, method string, data 
 		return nil, fmt.Errorf("read response body: %w", err)
 	}
 	defer resp.Body.Close()
+
+	log.Println(string(respBody))
 
 	return respBody, nil
 }

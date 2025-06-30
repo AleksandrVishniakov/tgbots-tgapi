@@ -11,7 +11,4 @@ type GetUpdatesRequest struct {
 	AllowedUpdates []string `json:"allowed_updates,omitempty"`
 }
 
-type GetUpdatesResponse struct {
-	Ok     bool            `json:"ok"`
-	Result []models.Update `json:"result"`
-}
+type GetUpdatesResponse response[[]models.Update]
